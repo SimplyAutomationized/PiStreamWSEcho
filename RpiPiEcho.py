@@ -115,7 +115,7 @@ class BroadcastServerFactory(WebSocketServerFactory):
 
     def broadcast(self, msg):
         prepared_msg = self.prepareMessage(base64.b64encode(msg),isBinary=True)
-        print msg
+        #print msg
         for c in self.clients:
             c.sendPreparedMessage(prepared_msg)
 
@@ -127,7 +127,7 @@ if __name__ == '__main__':
         debug = False
     contextFactory = ssl.DefaultOpenSSLContextFactory('/etc/letsencrypt/live/pi.raspi-ninja.com/privkey.pem',
                                                       '/etc/letsencrypt/live/pi.raspi-ninja.com/cert.pem')
-    factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi",debug=True)
+    factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi",debug=debug)
     factory.protocol = PiServerProtocol
     listenWS(factory,contextFactory)
     print 'starting...'
