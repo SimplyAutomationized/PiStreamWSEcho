@@ -35,7 +35,7 @@ def pi_calc():
         # dpm = digits per minute
         now = time.time()
         elapsed = now - elapsedStart
-        if elapsed >= 1:
+        if elapsed >= .5:
             break
         elif (j-2) % 1000 == 0:
             break
