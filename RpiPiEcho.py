@@ -1,14 +1,16 @@
 import json,sys,base64
+import os
+
 from twisted.internet import reactor, ssl
 from twisted.python import log
+from twisted.python.modules import getModule
 from twisted.web.server import Site
 from twisted.web.static import File
-from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol, http
-from chapws import WsChapAuth
+from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerProtocol
 from autobahn.twisted.resource import WebSocketResource
 
 from autobahn.twisted.websocket import WebSocketServerProtocol, \
-    WebSocketServerFactory
+    WebSocketServerFactory,listenWS
 
 
 class DataObj(object):
@@ -49,7 +51,7 @@ class DigitAnalyzer:
 class PiServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
-        header= self.http_headers
+        header = self.http_headers
         if(header.has_key('pi')):
             self.factory.registerPiServer(self)
         else:
@@ -78,22 +80,16 @@ class PiServerProtocol(WebSocketServerProtocol):
 
 class BroadcastServerFactory(WebSocketServerFactory):
     def __init__(self, url, debug=True, debugCodePaths=True):
-        self.digitAnalyzer = {'/ws_pi?dec':DigitAnalyzer(),
-                              '/ws_pi?bbp':DigitAnalyzer()
-                              }
-
         WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
         self.clients = {'/ws_pi?dec': [], '/ws_pi?bbp': []}
         self.piClient = []
 
     def registerPiServer(self,PiClient):
-        #print PiClient.__dict__
         ws_page = PiClient.http_request_uri
         self.piClient.append(PiClient)
 
     def register(self, client):
         ws_page = client.http_request_uri
-        #print ws_page
         if self.clients.has_key(ws_page):
             if client not in self.clients[ws_page]:
                 self.clients[ws_page].append(client)
@@ -101,10 +97,10 @@ class BroadcastServerFactory(WebSocketServerFactory):
 
     def unregister(self, client):
         ws_page = client.http_request_uri
-        #print ws_page
         if(client in self.clients[ws_page]):
             self.clients[ws_page].remove(client)
             self.clientChange(ws_page)
+
         if(client in self.piClient):
             self.piClient.remove(client)
 
@@ -112,7 +108,6 @@ class BroadcastServerFactory(WebSocketServerFactory):
         self.broadcast(json.dumps({"connectedClients": len(self.clients[ws_page])}),ws_page)
 
     def broadcast(self, msg,ws_page):
-        #base64.b64encode 3x faster than str.encode('base64')
         prepared_msg = self.prepareMessage(base64.b64encode(msg),isBinary=True)
         print msg
         for c in self.clients[ws_page]:
@@ -124,14 +119,11 @@ if __name__ == '__main__':
         debug = True
     else:
         debug = False
-
-    contextFactory = ssl.DefaultOpenSSLContextFactory('keys/pi.key', 'keys/pi.crt')
-    factory = BroadcastServerFactory(u"wss://picalc.raspi-ninja.com/ws:443")
+    contextFactory = ssl.DefaultOpenSSLContextFactory('/etc/letsencrypt/live/pi.raspi-ninja.com/privkey.pem',
+                                                      '/etc/letsencrypt/live/pi.raspi-ninja.com/cert.pem')
+    factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi")
     factory.protocol = PiServerProtocol
-    resource = WebSocketResource(factory)
-    root = File("web")
-    root.putChild(u"ws_pi", resource)
-    site = Site(root)
-    reactor.listenSSL(443, site, contextFactory)
+    #resource = WebSocketResource(factory)
+    listenWS(factory,contextFactory)
     print 'starting...'
     reactor.run()
