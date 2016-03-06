@@ -44,7 +44,8 @@ class PiWebSocketProtocol(WebSocketClientProtocol):
         self.factory.sendMessage = self.sendMessage
 
     def onOpen(self):
-        self.factory.start_calculating()
+        # self.factory.start_calculating()
+        pass
 
     def onMessage(self, payload, isBinary):
         pass
@@ -59,11 +60,11 @@ class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
     running_calc = 0
 
     def clientConnectionFailed(self, connector, reason):
-        #print("Client connection failed .. retrying ..")
+        print("Client connection failed .. retrying ..")
         self.retry(connector)
 
     def clientConnectionLost(self, connector, reason):
-        #print("Client connection lost .. retrying ..")
+        print("Client connection lost .. retrying ..")
         self.retry(connector)
 
     def sendMessage(self,data):
@@ -85,9 +86,8 @@ class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
 
 if __name__=="__main__":
     import sys
-
     log.startLogging(sys.stdout)
     headers = {"PiClient":"Pi3"}
-    factory = PiWebSocketFactory(u"wss://pi.raspi-ninja.com:/ws?pi",headers=headers, debug=False)
+    factory = PiWebSocketFactory(u"wss://pi.raspi-ninja.com:/ws_pi?pi",headers=headers, debug=True)
     reactor.connectTCP("pi.raspi-ninja.com", 9000, factory)
     reactor.run()
