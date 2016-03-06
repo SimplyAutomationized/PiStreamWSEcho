@@ -51,31 +51,33 @@ class DigitAnalyzer:
 class PiServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
-        # header = self.http_headers
-        # print header
-        # if(header.has_key('PiClient')):
-        #     self.factory.registerPiServer(self)
-        #     print 'welcome :',header['pi']
-        # else:
-        self.factory.register(self)
+        header = self.http_headers
+        print header
+        if(header.has_key('piclient')):
+            self.factory.registerPiServer(self)
+            print 'welcome :',header['piclient']
+        else:
+            self.factory.register(self)
     def onConnect(self, request):
         print self.http_headers
         pass
 
     def onMessage(self, payload, isBinary):
-        if self not in self.factory.clients:
-            self.factory.broadcast(payload)
-        # if(self in self.factory.piClient):
-        #     data = DataObj(json.loads(payload))
-        #     #print data.__dict__
-        #     ws_url = self.http_request_uri
-        #     if data.digit:
-        #         self.factory.digitAnalyzer[ws_url]
-        #     if data.dpm:
-        #         self.factory.digitAnalyzer[ws_url].addDPM(data.dpm)
-        #     if data.mark:
-        #         self.factory.digitAnalyzer[ws_url].history.append(data.mark.__dict__)
-        #     self.factory.broadcast(payload, ws_url)
+        if(self in self.factory.piClient):
+            data = DataObj(json.loads(payload))
+            #print data.__dict__
+            ws_url = self.http_request_uri
+            if data.digit:
+                for num in data.digit:
+                    if self.digitcounts.has_key(num):
+                        self.digitcounts[num]+=1
+                    else:
+                        self.digitcounts[num]=1
+            if data.dpm:
+                self.dpm_history.append(data.dpm)
+            if data.mark:
+                self.digits_history.append(data.mark)
+            self.factory.broadcast(payload, ws_url)
         #else: #possibly create a chat
 
     def onClose(self, wasClean, code, reason):
@@ -85,9 +87,13 @@ class BroadcastServerFactory(WebSocketServerFactory):
     def __init__(self, url, debug=True, debugCodePaths=True):
         WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
         self.clients = []
+        self.digitAnalyzer = DigitAnalyzer()
         self.piClient = []
 
     def registerPiServer(self,PiClient):
+        self.digits_history=[]
+        self.digitcounts={}
+        self.digit_count=0
         self.piClient.append(PiClient)
 
     def register(self, client):

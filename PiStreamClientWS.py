@@ -4,7 +4,6 @@ from twisted.internet import threads
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python import log
 from twisted.internet import reactor, ssl
-from twisted.internet import reactor
 
 from gmpy import mpz
 try:
@@ -12,31 +11,37 @@ try:
 except ImportError:
     import json
 
+
 calc_uy = 1
 u,y = -1,-1
 q,r,t,j = mpz(1), mpz(180), mpz(60), 2
-sstartTime = -1
+startTime = -1
+
+
 def pi_calc():
     global calcs,y,u,q,r,t,j,calc_uy,startTime
     digitstring = ''
     dpm = 0
     strPi = ''
     loop = 1
+    elapsed=0
+    elapsedStart = time.time()
     while loop:
-        if calc_uy:
-            u, y = mpz(3*(3*j+1)*(3*j+2)), mpz((q*(27*j-12)+5*r)/(5*t))
-            strPi = str(y)
-            digitstring += strPi
-        if (len(digitstring) > (dpm*60/1000)):
-            calc_uy = 0
-            break
-        else:
-            calc_uy = 1
+        digitCalcTime = time.time()
+        u, y = mpz(3*(3*j+1)*(3*j+2)), mpz((q*(27*j-12)+5*r)/(5*t))
+        strPi = str(y)
+        digitstring += strPi
         q, r, t, j = mpz((20*j**2-10*j)*q), mpz(10*u*(q*(5*j-2)+r-y*t)), mpz(t*u), j+1
         # dpm = digits per minute
-        elapsed = time.time() - startTime
-        dpm = round((j*1.0)/(elapsed*1.0),2)
-    return {"digit": digitstring, "digits": j, "dpm": round(dpm*60)}
+        now = time.time()
+        elapsed = now - elapsedStart
+        if elapsed >= 1:
+            break
+        elif (j-2) % 1000 == 0:
+            break
+    dps = (1.0/elapsed)*len(digitstring)
+    return {"digit": digitstring, "digits": j-2, "dpm": round(dps*60),"dps":round(dps,2)}
+
 
 class PiWebSocketProtocol(WebSocketClientProtocol):
     def onConnect(self, response):
