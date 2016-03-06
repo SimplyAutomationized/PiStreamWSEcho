@@ -74,7 +74,7 @@ class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
     def start_calculating(self):
         global startTime
         print 'starting calcs'
-        if not self.runningcalc:
+        if not self.running_calc:
                 self.sendMessage(json.dumps({"startTime": time.time()}))
                 startTime = time.time()
                 d = threads.deferToThread(pi_calc)
