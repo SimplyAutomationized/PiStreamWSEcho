@@ -40,7 +40,10 @@ def pi_calc():
         elif (j-2) % 1000 == 0:
             break
     dps = (1.0/elapsed)*len(digitstring)
-    return {"digit": digitstring, "digits": j-2, "dpm": round(dps*60),"dps":round(dps,2)}
+    info = {"digit": digitstring, "digits": j-2, "dpm": round(dps*60),"dps":round(dps,2)}
+    if (j-2) % 1000 != 0:
+        info['mark'] = {(j-2) : startTime-time.time()}
+    return info
 
 
 class PiWebSocketProtocol(WebSocketClientProtocol):

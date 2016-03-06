@@ -52,32 +52,31 @@ class PiServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
         header = self.http_headers
-        print header
         if(header.has_key('piclient')):
             self.factory.registerPiServer(self)
-            print 'welcome :',header['piclient']
         else:
+            print 'non pi client', self.peer
             self.factory.register(self)
+
     def onConnect(self, request):
-        print self.http_headers
         pass
 
     def onMessage(self, payload, isBinary):
-        if(self in self.factory.piClient):
+        if(self in self.factory.piClients):
             data = DataObj(json.loads(payload))
             #print data.__dict__
             ws_url = self.http_request_uri
             if data.digit:
                 for num in data.digit:
                     if self.digitcounts.has_key(num):
-                        self.digitcounts[num]+=1
+                        self.digitcounts[num] += 1
                     else:
-                        self.digitcounts[num]=1
+                        self.digitcounts[num] = 1
             if data.dpm:
                 self.dpm_history.append(data.dpm)
             if data.mark:
                 self.digits_history.append(data.mark)
-            self.factory.broadcast(payload, ws_url)
+            self.factory.broadcast(payload)
         #else: #possibly create a chat
 
     def onClose(self, wasClean, code, reason):
@@ -88,13 +87,15 @@ class BroadcastServerFactory(WebSocketServerFactory):
         WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
         self.clients = []
         self.digitAnalyzer = DigitAnalyzer()
-        self.piClient = []
+        self.piClients = []
 
     def registerPiServer(self,PiClient):
-        self.digits_history=[]
-        self.digitcounts={}
-        self.digit_count=0
-        self.piClient.append(PiClient)
+        PiClient.digits_history=[]
+        PiClient.digitcounts={}
+        PiClient.digit_count=0
+        PiClient.dpm_history=[]
+        self.piClients.append(PiClient)
+        print 'welcome :',PiClient.http_headers['piclient']
 
     def register(self, client):
         if client not in self.clients:
@@ -106,8 +107,8 @@ class BroadcastServerFactory(WebSocketServerFactory):
             self.clients.remove(client)
             self.clientChange()
 
-        if(client in self.piClient):
-            self.piClient.remove(client)
+        if(client in self.piClients):
+            self.piClients.remove(client)
 
     def clientChange(self):
         self.broadcast(json.dumps({"connectedClients": len(self.clients)}))
@@ -126,7 +127,7 @@ if __name__ == '__main__':
         debug = False
     contextFactory = ssl.DefaultOpenSSLContextFactory('/etc/letsencrypt/live/pi.raspi-ninja.com/privkey.pem',
                                                       '/etc/letsencrypt/live/pi.raspi-ninja.com/cert.pem')
-    factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi")
+    factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi",debug=True)
     factory.protocol = PiServerProtocol
     listenWS(factory,contextFactory)
     print 'starting...'
