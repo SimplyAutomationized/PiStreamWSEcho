@@ -1,8 +1,9 @@
 import time,timeit
-from autobahn.twisted.websocket import WebSocketClientProtocol,WebSocketClientFactory
+from autobahn.twisted.websocket import WebSocketClientProtocol,WebSocketClientFactory,connectWS
 from twisted.internet import threads
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python import log
+from twisted.internet import reactor, ssl
 from twisted.internet import reactor
 
 from gmpy import mpz
@@ -88,6 +89,7 @@ if __name__=="__main__":
     import sys
     log.startLogging(sys.stdout)
     headers = {"PiClient":"Pi3"}
+    contextFactory = ssl.ClientContextFactory()
     factory = PiWebSocketFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi?pi",headers=headers, debug=True)
-    reactor.connectTCP("pi.raspi-ninja.com", 9000, factory)
+    connectWS(factory,contextFactory)
     reactor.run()
