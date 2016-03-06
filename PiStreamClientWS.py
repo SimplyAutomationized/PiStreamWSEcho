@@ -11,15 +11,10 @@ try:
 except ImportError:
     import json
 
-
-
-
-
-
 calc_uy = 1
 u,y = -1,-1
 q,r,t,j = mpz(1), mpz(180), mpz(60), 2
-startTime = -1
+sstartTime = -1
 def pi_calc():
     global calcs,y,u,q,r,t,j,calc_uy,startTime
     digitstring = ''
@@ -49,7 +44,7 @@ class PiWebSocketProtocol(WebSocketClientProtocol):
         self.factory.sendMessage = self.sendMessage
 
     def onOpen(self):
-        self.factory.startCalculating()
+        self.factory.start_calculating()
 
     def onMessage(self, payload, isBinary):
         pass
@@ -61,6 +56,7 @@ class PiWebSocketProtocol(WebSocketClientProtocol):
 
 class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
     protocol = PiWebSocketProtocol
+    running_calc = 0
 
     def clientConnectionFailed(self, connector, reason):
         #print("Client connection failed .. retrying ..")
@@ -70,16 +66,18 @@ class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
         #print("Client connection lost .. retrying ..")
         self.retry(connector)
 
-    def sendMessage(self):
+    def sendMessage(self,data):
         pass
 
-    def startCalculating(self):
+    def start_calculating(self):
+        global startTime
         if not self.runningcalc:
                 self.sendMessage(json.dumps({"startTime": time.time()}))
                 startTime = time.time()
                 d = threads.deferToThread(pi_calc)
                 d.addCallback(self.getDigit)
-                self.runningcalc = 1
+                self.running_calc = 1
+
     def getDigit(self, pidigits):
         self.sendMessage(json.dumps(pidigits))
         d = threads.deferToThread(pi_calc)
@@ -89,8 +87,7 @@ if __name__=="__main__":
     import sys
 
     log.startLogging(sys.stdout)
-
-    factory = PiWebSocketFactory(u"wss://pi.raspi-ninja.com:/ws", debug=False)
-    factory.headers['pi']="Pi3"
+    headers = {"PiClient":"Pi3"}
+    factory = PiWebSocketFactory(u"wss://pi.raspi-ninja.com:/ws?pi",headers=headers, debug=False)
     reactor.connectTCP("pi.raspi-ninja.com", 9000, factory)
     reactor.run()
