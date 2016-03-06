@@ -51,29 +51,32 @@ class DigitAnalyzer:
 class PiServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
-        header = self.http_headers
-        if(header.has_key('pi')):
-            self.factory.registerPiServer(self)
-        else:
-            self.factory.register(self)
+        # header = self.http_headers
+        # print header
+        # if(header.has_key('PiClient')):
+        #     self.factory.registerPiServer(self)
+        #     print 'welcome :',header['pi']
+        # else:
+        self.factory.register(self)
+    def onConnect(self, request):
+        print self.http_headers
+        pass
 
     def onMessage(self, payload, isBinary):
-
-
-        if(self in self.factory.piClient):
-            data = DataObj(json.loads(payload))
-            #print data.__dict__
-            ws_url=self.http_request_uri
-            if data.digit:
-                self.factory.digitAnalyzer[ws_url]
-            if data.dpm:
-                self.factory.digitAnalyzer[ws_url].addDPM(data.dpm)
-            if data.mark:
-                self.factory.digitAnalyzer[ws_url].history.append(data.mark.__dict__)
-            self.factory.broadcast(payload, ws_url)
-
+        if self not in self.factory.clients:
+            self.factory.broadcast(payload)
+        # if(self in self.factory.piClient):
+        #     data = DataObj(json.loads(payload))
+        #     #print data.__dict__
+        #     ws_url = self.http_request_uri
+        #     if data.digit:
+        #         self.factory.digitAnalyzer[ws_url]
+        #     if data.dpm:
+        #         self.factory.digitAnalyzer[ws_url].addDPM(data.dpm)
+        #     if data.mark:
+        #         self.factory.digitAnalyzer[ws_url].history.append(data.mark.__dict__)
+        #     self.factory.broadcast(payload, ws_url)
         #else: #possibly create a chat
-
 
     def onClose(self, wasClean, code, reason):
         self.factory.unregister(self)
@@ -81,36 +84,32 @@ class PiServerProtocol(WebSocketServerProtocol):
 class BroadcastServerFactory(WebSocketServerFactory):
     def __init__(self, url, debug=True, debugCodePaths=True):
         WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
-        self.clients = {'/ws_pi?dec': [], '/ws_pi?bbp': []}
+        self.clients = []
         self.piClient = []
 
     def registerPiServer(self,PiClient):
-        ws_page = PiClient.http_request_uri
         self.piClient.append(PiClient)
 
     def register(self, client):
-        ws_page = client.http_request_uri
-        if self.clients.has_key(ws_page):
-            if client not in self.clients[ws_page]:
-                self.clients[ws_page].append(client)
-                self.clientChange(ws_page)
+        if client not in self.clients:
+            self.clients.append(client)
+            self.clientChange()
 
     def unregister(self, client):
-        ws_page = client.http_request_uri
-        if(client in self.clients[ws_page]):
-            self.clients[ws_page].remove(client)
-            self.clientChange(ws_page)
+        if client in self.clients:
+            self.clients.remove(client)
+            self.clientChange()
 
         if(client in self.piClient):
             self.piClient.remove(client)
 
-    def clientChange(self,ws_page):
-        self.broadcast(json.dumps({"connectedClients": len(self.clients[ws_page])}),ws_page)
+    def clientChange(self):
+        self.broadcast(json.dumps({"connectedClients": len(self.clients)}))
 
-    def broadcast(self, msg,ws_page):
+    def broadcast(self, msg):
         prepared_msg = self.prepareMessage(base64.b64encode(msg),isBinary=True)
         print msg
-        for c in self.clients[ws_page]:
+        for c in self.clients:
             c.sendPreparedMessage(prepared_msg)
 
 if __name__ == '__main__':
@@ -123,7 +122,6 @@ if __name__ == '__main__':
                                                       '/etc/letsencrypt/live/pi.raspi-ninja.com/cert.pem')
     factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi")
     factory.protocol = PiServerProtocol
-    #resource = WebSocketResource(factory)
     listenWS(factory,contextFactory)
     print 'starting...'
     reactor.run()

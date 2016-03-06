@@ -88,6 +88,6 @@ if __name__=="__main__":
     import sys
     log.startLogging(sys.stdout)
     headers = {"PiClient":"Pi3"}
-    factory = PiWebSocketFactory(u"wss://pi.raspi-ninja.com:/ws_pi?pi",headers=headers, debug=True)
+    factory = PiWebSocketFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi?pi",headers=headers, debug=True)
     reactor.connectTCP("pi.raspi-ninja.com", 9000, factory)
     reactor.run()
