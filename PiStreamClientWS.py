@@ -45,7 +45,7 @@ class PiWebSocketProtocol(WebSocketClientProtocol):
         self.factory.sendMessage = self.sendMessage
 
     def onOpen(self):
-        # self.factory.start_calculating()
+        self.factory.start_calculating()
         pass
 
     def onMessage(self, payload, isBinary):
@@ -73,6 +73,7 @@ class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
 
     def start_calculating(self):
         global startTime
+        print 'starting calcs'
         if not self.runningcalc:
                 self.sendMessage(json.dumps({"startTime": time.time()}))
                 startTime = time.time()
