@@ -57,11 +57,22 @@ class PiServerProtocol(WebSocketServerProtocol):
                         self.stats.digitcounts[num] += 1
                     else:
                         self.stats.digitcounts[num] = 1
-            if data.dpm:
-                self.stats.dpm_history.append({data.time:data.dpm})
+            newpayload = {
+                            "Device": self.device,
+                            "digits": data.digit,
+                            "runtime": data.time - self.stats.startTime,
+                            "dpm": data.dpm
+                        }
             if data.mark:
                 self.stats.digits_history.append(data.mark.__dict__)
-            self.factory.broadcast(payload)
+                if data.dpm:
+                    self.stats.dpm_history.append({data.time: data.dps})
+                newpayload['mark'] = {
+                    data.time: data.dps,
+                    "digitmark": data.mark.digitmark,
+                    "time": data.mark.time
+                }
+            self.factory.broadcast(newpayload)
         #else: #possibly create a chat
 
     def onClose(self, wasClean, code, reason):
@@ -79,7 +90,7 @@ class BroadcastServerFactory(WebSocketServerFactory):
         PiClient.stats.digitcounts={}
         PiClient.stats.digit_count=0
         PiClient.stats.dpm_history=[]
-
+        PiClient.device = PiClient.http_headers['piclient']
         self.piClients.append(PiClient)
         print 'welcome :',PiClient.http_headers['piclient']
 
@@ -87,8 +98,8 @@ class BroadcastServerFactory(WebSocketServerFactory):
         if client not in self.clients:
             self.clients.append(client)
             for piclient in self.piClients:
-                print piclient.stats.__dict__
-                #self.sendMessage()
+                piclient.stats.__dict__
+                self.sendMessage()
             self.clientChange()
 
     def unregister(self, client):
