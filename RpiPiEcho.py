@@ -28,25 +28,8 @@ class DataObj(object):
         except AttributeError:
             setattr(self,item,None)
             return super(DataObj, self).__getattribute__(item)
-
-
-class DigitAnalyzer:
-    def __init__(self):
-        self.digits={}
-        self.history = []
-        self.dpms = []
-
-    def appendDigits(self,digits):
-        for digit in digits:
-            if self.digits.has_key(digit):
-                self.digits[digit]=+1
-            else:
-                self.digits[digit]=1
-
-    def addDPM(self,dpm):
-        self.dpms.append(dpm)
-        if(len(self.dpms)>100):
-            self.dpms.pop(0)
+class Stats(object):
+    pass
 
 class PiServerProtocol(WebSocketServerProtocol):
 
@@ -66,16 +49,18 @@ class PiServerProtocol(WebSocketServerProtocol):
             data = DataObj(json.loads(payload))
             #print data.__dict__
             ws_url = self.http_request_uri
+            if data.startTime:
+                self.stats.startTime = data.startTime
             if data.digit:
                 for num in data.digit:
-                    if self.digitcounts.has_key(num):
-                        self.digitcounts[num] += 1
+                    if self.stats.digitcounts.has_key(num):
+                        self.stats.digitcounts[num] += 1
                     else:
-                        self.digitcounts[num] = 1
+                        self.stats.digitcounts[num] = 1
             if data.dpm:
-                self.dpm_history.append(data.dpm)
+                self.stats.dpm_history.append({data.time:data.dpm})
             if data.mark:
-                self.digits_history.append(data.mark)
+                self.stats.digits_history.append(data.mark.__dict__)
             self.factory.broadcast(payload)
         #else: #possibly create a chat
 
@@ -86,20 +71,24 @@ class BroadcastServerFactory(WebSocketServerFactory):
     def __init__(self, url, debug=True, debugCodePaths=True):
         WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
         self.clients = []
-        self.digitAnalyzer = DigitAnalyzer()
         self.piClients = []
 
     def registerPiServer(self,PiClient):
-        PiClient.digits_history=[]
-        PiClient.digitcounts={}
-        PiClient.digit_count=0
-        PiClient.dpm_history=[]
+        PiClient.stats = Stats()
+        PiClient.stats.digits_history=[]
+        PiClient.stats.digitcounts={}
+        PiClient.stats.digit_count=0
+        PiClient.stats.dpm_history=[]
+
         self.piClients.append(PiClient)
         print 'welcome :',PiClient.http_headers['piclient']
 
     def register(self, client):
         if client not in self.clients:
             self.clients.append(client)
+            for piclient in self.piClients:
+                print piclient.stats.__dict__
+                #self.sendMessage()
             self.clientChange()
 
     def unregister(self, client):
