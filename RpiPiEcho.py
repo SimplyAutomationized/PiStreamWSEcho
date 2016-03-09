@@ -41,6 +41,7 @@ class PiServerProtocol(WebSocketServerProtocol):
             print 'non pi client', self.peer
             self.factory.register(self)
 
+
     def onConnect(self, request):
         pass
 
@@ -51,28 +52,28 @@ class PiServerProtocol(WebSocketServerProtocol):
             ws_url = self.http_request_uri
             if data.startTime:
                 self.stats.startTime = data.startTime
-            if data.digit:
+            if data.digits:
                 for num in data.digit:
                     if self.stats.digitcounts.has_key(num):
                         self.stats.digitcounts[num] += 1
                     else:
                         self.stats.digitcounts[num] = 1
             newpayload = {
-                            "Device": self.device,
-                            "digits": data.digit,
-                            # "runtime": data.time - self.stats.startTime,
-                            "dpm": data.dpm
+                            "device": self.device,
+                            "digits": data.digits,
+                            "dpm": data.dpm,
+                            "digitcount": data.digitcount
                         }
             if data.mark:
                 self.stats.digits_history.append(data.mark.__dict__)
                 if data.dpm:
-                    self.stats.dpm_history.append({data.time: data.dps})
+                    self.stats.dpm_history.append({data.mark.runtime: data.dps})
                 newpayload['mark'] = {
-                    data.time: data.dps,
+                    "dps": data.dps,
                     "digitmark": data.mark.digitmark,
-                    "time": data.mark.time
+                    "time": data.mark.runtime
                 }
-            self.factory.broadcast(newpayload)
+            self.factory.broadcast(json.dumps(newpayload))
         else:
             try:
                 data = DataObj(json.loads(payload))
@@ -92,7 +93,7 @@ class BroadcastServerFactory(WebSocketServerFactory):
 
     def registerPiServer(self,PiClient):
         PiClient.stats = Stats()
-        # self.stats.startTime = 0
+        PiClient.stats.startTime = 0
         PiClient.stats.digits_history=[]
         PiClient.stats.digitcounts = {}
         PiClient.stats.digit_count=0
@@ -107,7 +108,7 @@ class BroadcastServerFactory(WebSocketServerFactory):
             self.clients.append(client)
             for piclient in self.piClients:
                 newclientdata={"piclient": piclient.device}
-                self.sendMessage(newclientdata)
+                client.sendMessage(json.dumps(newclientdata))
             self.clientChange()
 
     def unregister(self, client):
@@ -125,6 +126,7 @@ class BroadcastServerFactory(WebSocketServerFactory):
         prepared_msg = self.prepareMessage(base64.b64encode(msg),isBinary=True)
         #print msg
         for c in self.clients:
+
             c.sendPreparedMessage(prepared_msg)
 
 if __name__ == '__main__':
@@ -135,8 +137,8 @@ if __name__ == '__main__':
         debug = False
     contextFactory = ssl.DefaultOpenSSLContextFactory('/etc/letsencrypt/live/pi.raspi-ninja.com/privkey.pem',
                                                       '/etc/letsencrypt/live/pi.raspi-ninja.com/cert.pem')
-    factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi",debug=debug)
+    factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi", debug=debug)
     factory.protocol = PiServerProtocol
-    listenWS(factory,contextFactory)
+    listenWS(factory, contextFactory)
     print 'starting...'
     reactor.run()

@@ -41,15 +41,14 @@ def pi_calc():
             break
     dps = (1.0/elapsed)*len(digitstring)
     info = {
-            "digit": digitstring,
-            "digits": j-2,
+            "digits": digitstring,
+            "digitcount": j-2,
             "dpm": round(dps*60),
-            "dps":round(dps,2),
-            'time':time.time()
+            "dps":round(dps,2)
             }
     if (j-2) % 1000 != 0:
         info['mark'] = {"digitmark":(j-2),
-                        "time": time.time()-startTime}
+                        "runtime": time.time()-startTime}
     return info
 
 
