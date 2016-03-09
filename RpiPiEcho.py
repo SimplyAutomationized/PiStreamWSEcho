@@ -106,8 +106,8 @@ class BroadcastServerFactory(WebSocketServerFactory):
             client.showpi = None
             self.clients.append(client)
             for piclient in self.piClients:
-                piclient.stats.__dict__
-                self.sendMessage()
+                newclientdata={"piclient": piclient.device}
+                self.sendMessage(newclientdata)
             self.clientChange()
 
     def unregister(self, client):
