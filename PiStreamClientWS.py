@@ -44,7 +44,7 @@ def pi_calc():
             "digits": digitstring,
             "digitcount": j-2,
             "dpm": round(dps*60),
-            "dps":round(dps,2)
+            "dps":round(dps, 2)
             }
     if (j-2) % 1000 != 0:
         info['mark'] = {"digitmark":(j-2),

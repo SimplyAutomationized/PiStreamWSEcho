@@ -53,7 +53,7 @@ class PiServerProtocol(WebSocketServerProtocol):
             if data.startTime:
                 self.stats.startTime = data.startTime
             if data.digits:
-                for num in data.digit:
+                for num in data.digits:
                     if self.stats.digitcounts.has_key(num):
                         self.stats.digitcounts[num] += 1
                     else:
@@ -91,16 +91,16 @@ class BroadcastServerFactory(WebSocketServerFactory):
         self.clients = []
         self.piClients = []
 
-    def registerPiServer(self,PiClient):
+    def registerPiServer(self, PiClient):
         PiClient.stats = Stats()
         PiClient.stats.startTime = 0
-        PiClient.stats.digits_history=[]
+        PiClient.stats.digits_history = []
         PiClient.stats.digitcounts = {}
-        PiClient.stats.digit_count=0
-        PiClient.stats.dpm_history=[]
+        PiClient.stats.digit_count = 0
+        PiClient.stats.dpm_history = []
         PiClient.device = PiClient.http_headers['piclient']
         self.piClients.append(PiClient)
-        print 'welcome :',PiClient.http_headers['piclient']
+        print 'welcome :', PiClient.http_headers['piclient']
 
     def register(self, client):
         if client not in self.clients:
