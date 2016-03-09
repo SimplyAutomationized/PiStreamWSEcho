@@ -60,7 +60,7 @@ class PiServerProtocol(WebSocketServerProtocol):
             newpayload = {
                             "Device": self.device,
                             "digits": data.digit,
-                            "runtime": data.time - self.stats.startTime,
+                            # "runtime": data.time - self.stats.startTime,
                             "dpm": data.dpm
                         }
             if data.mark:
@@ -73,7 +73,13 @@ class PiServerProtocol(WebSocketServerProtocol):
                     "time": data.mark.time
                 }
             self.factory.broadcast(newpayload)
-        #else: #possibly create a chat
+        else:
+            try:
+                data = DataObj(json.loads(payload))
+                if data.showpi:
+                    self.showpi = data.showpi
+            except Exception as e:
+                pass
 
     def onClose(self, wasClean, code, reason):
         self.factory.unregister(self)
@@ -86,8 +92,9 @@ class BroadcastServerFactory(WebSocketServerFactory):
 
     def registerPiServer(self,PiClient):
         PiClient.stats = Stats()
+        # self.stats.startTime = 0
         PiClient.stats.digits_history=[]
-        PiClient.stats.digitcounts={}
+        PiClient.stats.digitcounts = {}
         PiClient.stats.digit_count=0
         PiClient.stats.dpm_history=[]
         PiClient.device = PiClient.http_headers['piclient']
@@ -96,6 +103,7 @@ class BroadcastServerFactory(WebSocketServerFactory):
 
     def register(self, client):
         if client not in self.clients:
+            client.showpi = None
             self.clients.append(client)
             for piclient in self.piClients:
                 piclient.stats.__dict__
