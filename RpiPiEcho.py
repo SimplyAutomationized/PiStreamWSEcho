@@ -10,7 +10,7 @@ from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerPr
 from autobahn.twisted.resource import WebSocketResource
 
 from autobahn.twisted.websocket import WebSocketServerProtocol, \
-    WebSocketServerFactory
+    WebSocketServerFactory,listenWS
 
 
 class DataObj(object):
@@ -28,6 +28,8 @@ class DataObj(object):
         except AttributeError:
             setattr(self,item,None)
             return super(DataObj, self).__getattribute__(item)
+
+
 class Stats(object):
     pass
 
@@ -35,30 +37,35 @@ class PiServerProtocol(WebSocketServerProtocol):
 
     def onOpen(self):
         header = self.http_headers
-        if(header.has_key('piclient')):
+        if header.has_key('piclient'):
             self.factory.registerPiServer(self)
         else:
             print 'non pi client', self.peer
             self.factory.register(self)
-
 
     def onConnect(self, request):
         print request
         pass
 
     def onMessage(self, payload, isBinary):
-        if(self in self.factory.piClients):
+        if self in self.factory.piClients:
             data = DataObj(json.loads(payload))
-            #print data.__dict__
             ws_url = self.http_request_uri
             if data.startTime:
                 self.stats.startTime = data.startTime
+                self.factory.broadcast({
+                    "piclient": self.device,
+                    "stats": {
+                        "startTime":self.stats.startTime
+                    }
+                })
             if data.digits:
                 for num in data.digits:
                     if self.stats.digitcounts.has_key(num):
                         self.stats.digitcounts[num] += 1
                     else:
                         self.stats.digitcounts[num] = 1
+
             newpayload = {
                             "device": self.device,
                             "digits": data.digits,
@@ -114,7 +121,9 @@ class BroadcastServerFactory(WebSocketServerFactory):
             for piclient in self.piClients:
                 newclientdata={
                     "piclient": piclient.device,
-                    "stats": piclient.stats.__dict__
+                    "stats": {
+                        "startTime":piclient.stats.startTime
+                    }
                 }
                 print newclientdata
                 client.sendMessage(json.dumps(newclientdata))
@@ -134,12 +143,15 @@ class BroadcastServerFactory(WebSocketServerFactory):
         #prepared_msg = self.prepareMessage((msg),isBinary=False)
         #print msg
         for c in self.clients:
-            if not c.showpi and msg.has_key("digits"):
-                del(msg["digits"])
-            else:
-                if msg.has_key('digitcounts'):
-                    del(msg["digitcounts"])
-            c.sendMessage(json.dumps(msg))
+            data = msg
+            if not c.showpi:
+                if data.has_key("digits"):
+                    del(data["digits"])
+            elif data.has_key('digitcounts'):
+                print data['digits']
+                del(data["digitcounts"])
+            c.sendMessage(json.dumps(data))
+
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'debug':
@@ -151,7 +163,7 @@ if __name__ == '__main__':
                                                       '/etc/letsencrypt/live/pi.raspi-ninja.com/cert.pem')
 
     #factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9443", debug=debug, debugCodePaths=True)
-    factory80 = BroadcastServerFactory(u"ws://pi.raspi-ninja.com")
+    factory80 = BroadcastServerFactory(u"ws://pi.raspi-ninja.com:9443/ws_pi")
 
     #factory.protocol = PiServerProtocol
     factory80.protocol = PiServerProtocol
@@ -159,11 +171,12 @@ if __name__ == '__main__':
     #resource = WebSocketResource(factory)
     resource80 = WebSocketResource(factory80)
 
-    root = File("../pi-ninja/")
-    root.putChild(u"ws_pi", resource80)
-    #root.putChild(u'')
-    site = Site(root)
+    # root = File("../pi-ninja/")
+    # root.putChild(u"ws_pi", resource80)
+    # #root.putChild(u'')
+    # site = Site(root)
+    listenWS(factory80)
     #reactor.listenSSL(9443,site,  contextFactory)
-    reactor.listenTCP(9080,site)
+    # reactor.listenTCP(9080,site)
     print 'starting...'
     reactor.run()

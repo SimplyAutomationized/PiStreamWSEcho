@@ -48,6 +48,7 @@ def pi_calc():
             }
     if (j-2) % 1000 == 0:
         info['mark'] = {"digitmark":(j-2),
+                       # "startTime":startTime,
                         "runtime": time.time()-startTime}
     return info
 
