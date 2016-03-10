@@ -10,7 +10,7 @@ from autobahn.twisted.websocket import WebSocketServerFactory, WebSocketServerPr
 from autobahn.twisted.resource import WebSocketResource
 
 from autobahn.twisted.websocket import WebSocketServerProtocol, \
-    WebSocketServerFactory,listenWS
+    WebSocketServerFactory
 
 
 class DataObj(object):
@@ -43,6 +43,7 @@ class PiServerProtocol(WebSocketServerProtocol):
 
 
     def onConnect(self, request):
+        print request
         pass
 
     def onMessage(self, payload, isBinary):
@@ -62,7 +63,8 @@ class PiServerProtocol(WebSocketServerProtocol):
                             "device": self.device,
                             "digits": data.digits,
                             "dpm": data.dpm,
-                            "digitcount": data.digitcount
+                            "digitcount": data.digitcount,
+                            "digitcounts": self.stats.digitcounts
                         }
             if data.mark:
                 self.stats.digits_history.append(data.mark.__dict__)
@@ -73,21 +75,24 @@ class PiServerProtocol(WebSocketServerProtocol):
                     "digitmark": data.mark.digitmark,
                     "time": data.mark.runtime
                 }
-            self.factory.broadcast(json.dumps(newpayload))
+            self.factory.broadcast(newpayload)
         else:
             try:
                 data = DataObj(json.loads(payload))
-                if data.showpi:
+                print data.__dict__
+                if json.loads(payload).has_key("showpi"):
                     self.showpi = data.showpi
+
             except Exception as e:
+                print e
                 pass
 
     def onClose(self, wasClean, code, reason):
         self.factory.unregister(self)
 
 class BroadcastServerFactory(WebSocketServerFactory):
-    def __init__(self, url, debug=True, debugCodePaths=True):
-        WebSocketServerFactory.__init__(self, url, debug=debug, debugCodePaths=debugCodePaths)
+    def __init__(self, url, debug=True):
+        WebSocketServerFactory.__init__(self, url)
         self.clients = []
         self.piClients = []
 
@@ -104,10 +109,14 @@ class BroadcastServerFactory(WebSocketServerFactory):
 
     def register(self, client):
         if client not in self.clients:
-            client.showpi = None
+            client.showpi = False
             self.clients.append(client)
             for piclient in self.piClients:
-                newclientdata={"piclient": piclient.device}
+                newclientdata={
+                    "piclient": piclient.device,
+                    "stats": piclient.stats.__dict__
+                }
+                print newclientdata
                 client.sendMessage(json.dumps(newclientdata))
             self.clientChange()
 
@@ -115,19 +124,22 @@ class BroadcastServerFactory(WebSocketServerFactory):
         if client in self.clients:
             self.clients.remove(client)
             self.clientChange()
-
         if(client in self.piClients):
             self.piClients.remove(client)
 
     def clientChange(self):
-        self.broadcast(json.dumps({"connectedClients": len(self.clients)}))
+        self.broadcast({"connectedClients": len(self.clients)})
 
     def broadcast(self, msg):
-        prepared_msg = self.prepareMessage(base64.b64encode(msg),isBinary=True)
+        #prepared_msg = self.prepareMessage((msg),isBinary=False)
         #print msg
         for c in self.clients:
-
-            c.sendPreparedMessage(prepared_msg)
+            if not c.showpi and msg.has_key("digits"):
+                del(msg["digits"])
+            else:
+                if msg.has_key('digitcounts'):
+                    del(msg["digitcounts"])
+            c.sendMessage(json.dumps(msg))
 
 if __name__ == '__main__':
     if len(sys.argv) > 1 and sys.argv[1] == 'debug':
@@ -137,8 +149,21 @@ if __name__ == '__main__':
         debug = False
     contextFactory = ssl.DefaultOpenSSLContextFactory('/etc/letsencrypt/live/pi.raspi-ninja.com/privkey.pem',
                                                       '/etc/letsencrypt/live/pi.raspi-ninja.com/cert.pem')
-    factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi", debug=debug)
-    factory.protocol = PiServerProtocol
-    listenWS(factory, contextFactory)
+
+    #factory = BroadcastServerFactory(u"wss://pi.raspi-ninja.com:9443", debug=debug, debugCodePaths=True)
+    factory80 = BroadcastServerFactory(u"ws://pi.raspi-ninja.com")
+
+    #factory.protocol = PiServerProtocol
+    factory80.protocol = PiServerProtocol
+
+    #resource = WebSocketResource(factory)
+    resource80 = WebSocketResource(factory80)
+
+    root = File("../pi-ninja/")
+    root.putChild(u"ws_pi", resource80)
+    #root.putChild(u'')
+    site = Site(root)
+    #reactor.listenSSL(9443,site,  contextFactory)
+    reactor.listenTCP(9080,site)
     print 'starting...'
     reactor.run()

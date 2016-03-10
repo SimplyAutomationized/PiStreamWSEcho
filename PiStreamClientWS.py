@@ -46,7 +46,7 @@ def pi_calc():
             "dpm": round(dps*60),
             "dps":round(dps, 2)
             }
-    if (j-2) % 1000 != 0:
+    if (j-2) % 1000 == 0:
         info['mark'] = {"digitmark":(j-2),
                         "runtime": time.time()-startTime}
     return info
