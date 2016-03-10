@@ -111,6 +111,6 @@ if __name__=="__main__":
     log.startLogging(sys.stdout)
     headers = {"PiClient":"Pi3"}
     contextFactory = ssl.ClientContextFactory()
-    factory = PiWebSocketFactory(u"wss://pi.raspi-ninja.com:9000/ws_pi?pi",headers=headers, debug=debug)
+    factory = PiWebSocketFactory(u"ws://pi.raspi-ninja.com/ws_pi?pi",headers=headers, debug=debug)
     connectWS(factory,contextFactory)
     reactor.run()
