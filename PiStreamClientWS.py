@@ -60,7 +60,11 @@ class PiWebSocketProtocol(WebSocketClientProtocol):
         self.factory.sendMessage = self.sendMessage
 
     def onOpen(self):
-        self.factory.start_calculating()
+        if not self.factory.running_calc:
+            self.factory.start_calculating()
+        else:
+            self.sendMessage(json.dumps({"startTime": time.time()}))
+
         pass
 
     def onMessage(self, payload, isBinary):

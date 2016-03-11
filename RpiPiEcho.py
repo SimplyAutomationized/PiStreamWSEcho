@@ -68,10 +68,10 @@ class PiServerProtocol(WebSocketServerProtocol):
 
             newpayload = {
                             "device": self.device,
-                            "digits": data.digits,
+                            # "digits": data.digits,
                             "dpm": data.dpm,
                             "digitcount": data.digitcount,
-                            "digitcounts": self.stats.digitcounts
+                            # "digitcounts": self.stats.digitcounts
                         }
             if data.mark:
                 self.stats.digits_history.append(data.mark.__dict__)
@@ -82,7 +82,7 @@ class PiServerProtocol(WebSocketServerProtocol):
                     "digitmark": data.mark.digitmark,
                     "time": data.mark.runtime
                 }
-            self.factory.broadcast(newpayload)
+            self.factory.broadcast(newpayload, data.digits, self.stats.digitcounts)
         else:
             try:
                 data = DataObj(json.loads(payload))
@@ -139,17 +139,16 @@ class BroadcastServerFactory(WebSocketServerFactory):
     def clientChange(self):
         self.broadcast({"connectedClients": len(self.clients)})
 
-    def broadcast(self, msg):
+    def broadcast(self, msg,digits="",digitcounts={}):
         #prepared_msg = self.prepareMessage((msg),isBinary=False)
         #print msg
         for c in self.clients:
             data = msg
-            if not c.showpi:
-                if data.has_key("digits"):
-                    del(data["digits"])
-            elif data.has_key('digitcounts'):
-                print data['digits']
-                del(data["digitcounts"])
+            if c.showpi:
+                msg["digits"] = digits
+            else:
+                #print data['digits']
+                msg["digitcounts"] = digitcounts
             c.sendMessage(json.dumps(data))
 
 
