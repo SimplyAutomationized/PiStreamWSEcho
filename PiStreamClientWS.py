@@ -102,8 +102,8 @@ class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
                 d.addCallback(self.getDigit)
                 self.running_calc = 1
         else:
-            reactor.callLater(.1,self.start_calculating)
-            self.sendMessage({"countdown":self.testMark-time.time()})
+            reactor.callLater(.5,self.start_calculating)
+            self.sendMessage(json.dumps({"countdown":self.testMark-time.time()}))
 
     def getDigit(self, pidigits):
         self.sendMessage(json.dumps(pidigits))
