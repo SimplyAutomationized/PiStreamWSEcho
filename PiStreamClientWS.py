@@ -74,6 +74,7 @@ class PiWebSocketProtocol(WebSocketClientProtocol):
 class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
     protocol = PiWebSocketProtocol
     running_calc = 0
+    mar14 = 1457938800
 
     def clientConnectionFailed(self, connector, reason):
         print("Client connection failed .. retrying ..")
@@ -112,6 +113,6 @@ if __name__=="__main__":
     log.startLogging(sys.stdout)
     headers = {"PiClient":"Pi3"}
     contextFactory = ssl.ClientContextFactory()
-    factory = PiWebSocketFactory(u"ws://pi.raspi-ninja.com/ws_pi?pi",headers=headers, debug=debug)
+    factory = PiWebSocketFactory(u"ws://pi.raspi-ninja.com:9443/ws_pi?pi",headers=headers, debug=debug)
     connectWS(factory,contextFactory)
     reactor.run()
