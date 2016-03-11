@@ -84,7 +84,8 @@ class PiServerProtocol(WebSocketServerProtocol):
                     "digitmark": data.mark.digitmark,
                     "time": data.mark.runtime
                 }
-            self.factory.broadcast(newpayload, data.digits, self.stats.digitcounts)
+            if data.dpm:
+                self.factory.broadcast(newpayload, data.digits, self.stats.digitcounts)
         else:
             try:
                 data = DataObj(json.loads(payload))
