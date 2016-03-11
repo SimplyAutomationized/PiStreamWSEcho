@@ -59,6 +59,8 @@ class PiServerProtocol(WebSocketServerProtocol):
                         "startTime":self.stats.startTime
                     }
                 })
+            if data.countdown:
+                self.factory.broadcast(data.__dict__)
             if data.digits:
                 for num in data.digits:
                     if self.stats.digitcounts.has_key(num):
