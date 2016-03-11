@@ -79,7 +79,7 @@ class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
     protocol = PiWebSocketProtocol
     running_calc = 0
     mar14 = 1457938800
-
+    testMark = 1457685000
     def clientConnectionFailed(self, connector, reason):
         print("Client connection failed .. retrying ..")
         self.retry(connector)
@@ -93,14 +93,17 @@ class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
 
     def start_calculating(self):
         global startTime
-        print 'starting calcs'
-        if not self.running_calc:
+        print 'starting calcs in:',self.testMark-time.time()
+        if not self.running_calc and self.testMark-time.time()<=0:
                 self.sendMessage(json.dumps({"startTime": time.time()}))
                 startTime = time.time()
                 print 'start time',startTime
                 d = threads.deferToThread(pi_calc)
                 d.addCallback(self.getDigit)
                 self.running_calc = 1
+        else:
+            reactor.callLater(.1,self.start_calculating)
+            self.sendMessage({"countdown":self.testMark-time.time()})
 
     def getDigit(self, pidigits):
         self.sendMessage(json.dumps(pidigits))

@@ -44,7 +44,7 @@ class PiServerProtocol(WebSocketServerProtocol):
             self.factory.register(self)
 
     def onConnect(self, request):
-        print request
+        #print request
         pass
 
     def onMessage(self, payload, isBinary):
@@ -86,7 +86,7 @@ class PiServerProtocol(WebSocketServerProtocol):
         else:
             try:
                 data = DataObj(json.loads(payload))
-                print data.__dict__
+                #print data.__dict__
                 if json.loads(payload).has_key("showpi"):
                     self.showpi = data.showpi
 
