@@ -79,7 +79,7 @@ class PiWebSocketFactory(WebSocketClientFactory, ReconnectingClientFactory):
     protocol = PiWebSocketProtocol
     running_calc = 0
     mar14 = 1457938800
-    testMark = 1457685000
+    testMark = 1457686800
     def clientConnectionFailed(self, connector, reason):
         print("Client connection failed .. retrying ..")
         self.retry(connector)
